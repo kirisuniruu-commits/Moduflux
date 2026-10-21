@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.22)
+
+project(moduflux LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Folder that contains a checkout of https://github.com/LiteLDev/preloader-android
+# (the GitHub workflow downloads it for you and passes this path in).
+set(PRELOADER_ANDROID_ROOT
+    "${CMAKE_CURRENT_LIST_DIR}/preloader-android"
+    CACHE PATH "Path to LiteLDev/preloader-android")
+
+if(NOT EXISTS "${PRELOADER_ANDROID_ROOT}/include/pl/ModMenu.hpp")
+    message(FATAL_ERROR
+        "PRELOADER_ANDROID_ROOT must point to a preloader-android checkout. "
+        "Missing: ${PRELOADER_ANDROID_ROOT}/include/pl/ModMenu.hpp")
+endif()
+
+if(NOT ANDROID)
+    message(FATAL_ERROR "Moduflux must be built with the Android NDK toolchain.")
+endif()
+
+# Build the preloader library so our mod links against the exact same API.
+if(NOT TARGET preloader)
+    add_subdirectory("${PRELOADER_ANDROID_ROOT}"
+                     "${CMAKE_BINARY_DIR}/_preloader_android")
+endif()
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out/${ANDROID_ABI}")
+
+find_library(MODUFLUX_LOG_LIB log)
+
+add_library(moduflux SHARED src/Moduflux.cpp)
+set_target_properties(moduflux PROPERTIES OUTPUT_NAME "moduflux")
+target_include_directories(moduflux PRIVATE "${PRELOADER_ANDROID_ROOT}/include")
+target_compile_options(moduflux PRIVATE
+    -Wall -Wextra -fvisibility=hidden -fvisibility-inlines-hidden)
+
+if(MODUFLUX_LOG_LIB)
+    target_link_libraries(moduflux PRIVATE "${MODUFLUX_LOG_LIB}")
+endif()
+
+# The preloader headers use the fmt library.
+if(TARGET fmt)
+    target_link_libraries(moduflux PRIVATE fmt)
+endif()
+
+target_link_libraries(moduflux PRIVATE preloader)
