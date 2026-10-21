@@ -1,0 +1,8 @@
+{
+  "type": "preload-native",
+  "name": "Moduflux",
+  "author": "CH",
+  "version": "1.0.0",
+  "entry": "libmoduflux.so",
+  "minecraft_versions": []
+}
